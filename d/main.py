@@ -1,6 +1,7 @@
 import torch
 import torchvision
 import matplotlib.pyplot as plt
+import numpy as np
 
 torch.manual_seed(1)
 
@@ -28,7 +29,7 @@ class MNISTModel:
         self.b = torch.rand([1, 10], requires_grad=True)
 
     def f(self, x):
-        return torch.softmax(x @ self.W + self.b, 1)
+        return torch.softmax(self.logits(x), 1)
 
     def logits(self, x):
         return x @ self.W + self.b
@@ -47,7 +48,9 @@ optimizer = torch.optim.SGD([model.W, model.b], lr=learning_rate, momentum=momen
 batches = int(list(x_train[:, 0].shape)[0] / batch_size_train)
 
 print("Before training, Loss: %s, Accuracy: %s" % (model.loss(x_test, y_test).item(),
-                                                   model.accuracy(x_test, y_test)))
+                                                   model.accuracy(x_test, y_test).item()))
+
+epoch_accuracy = np.zeros((n_epochs, 2))
 
 for epoch in range(n_epochs):
     for batch in range(batches):
@@ -57,12 +60,20 @@ for epoch in range(n_epochs):
                    y_train[start:end, :]).backward()
         optimizer.step()
         optimizer.zero_grad()
-    print("Epoch: %i, Loss: %s, Accuracy: %s" % (epoch + 1,
-                                                 model.loss(x_test, y_test).item(),
-                                                 model.accuracy(x_test, y_test).item()))
+    epoch_accuracy[epoch] = np.array([epoch, model.accuracy(x_test, y_test).item()])
+    print("Epoch: %i, Loss: %.2f, Accuracy: %.2f" % (epoch + 1,
+                                                     model.loss(x_test, y_test).item(),
+                                                     model.accuracy(x_test, y_test).item()))
+
+# fig = plt.figure()
+# ax1 = fig.add_subplot(111)
+# ax1.set_xlabel("Epoch")
+# ax1.set_ylabel("Accuracy [%]")
+# ax1.set_title("Accuracy per round through the data")
+# ax1.plot(epoch_accuracy[:, 0], epoch_accuracy[:, 1], '-')
+# ax1.plot([0, n_epochs], [0.9, 0.9], '-', c='red')
 
 for i in range(10):
     plt.imsave("%i.png" % i, model.W[:, i].reshape(28, 28).detach())
-
 
 plt.show()
